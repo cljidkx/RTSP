@@ -4,7 +4,7 @@
 #endif
 
 //#define RTSPCLIENT_DLL
-
+//#define DEBUG
 #ifdef LINUX
 #undef RTSPCLIENT_DLL
 #endif
@@ -71,6 +71,9 @@ int main(int argc, char *argv[])
 #endif
 	int retry = 1;
 
+	if (argc < 2)
+		return -1;
+
 #ifdef RTSPCLIENT_DLL
 	rtspclient_set_debug_flag(DEBUG_FLAG_RTSP);
 #else
@@ -81,7 +84,7 @@ int main(int argc, char *argv[])
 	char* strURL = "rtsp://127.0.0.1:8554/h264ESVideoTest";
 	fp_dump = fopen("video.264", "wb");
 #else
-	char* strURL = "rtsp://admin:antsANTS@192.168.140.103/0";
+	char* strURL = argv[1];
 	fp_dump = fopen("video.265", "wb");
 #endif
 
@@ -95,7 +98,8 @@ again:
 #ifdef RTSPCLIENT_DLL
 	if (rtspclient_open_url(rtspClient, strURL, 1, 2) == 0)
 #else
-	if (rtspClient->openURL(strURL, 1, 2) == 0)
+	//STREAM_TYPE_UDP = 0, STREAM_TYPE_TCP = 1, STREAM_TYPE_MULTICAST = 2;
+	if (rtspClient->openURL(strURL, 0, 2) == 0)
 #endif
 	{
 #ifdef RTSPCLIENT_DLL
