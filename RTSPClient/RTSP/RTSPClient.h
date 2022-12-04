@@ -86,7 +86,7 @@ protected:
 
 protected:
 	int connectToServer(char const *ip_addr, unsigned short port, int timeout);
-	int sendRequest(char *str, char *tag);
+	int sendRequest(char *str, const char *tag);
 	bool getResponse(char const* tag,
 		unsigned& bytesRead, unsigned& responseCode,
 		char*& firstLine, char*& nextLineStart,
@@ -152,7 +152,7 @@ protected:
 	int				fRtpBufferSize;
 	int				fRtpBufferIdx;
 
-	char*			fUserAgentHeaderStr;
+	const char*			fUserAgentHeaderStr;
 	unsigned		fUserAgentHeaderStrSize;
 	char*			fBaseURL;
 	unsigned		fCSeq;

@@ -15,7 +15,7 @@ TaskScheduler::TaskScheduler()
 	MUTEX_INIT(&fMutex);
 	FD_ZERO(&fReadSet);
 	fMaxNumSockets = 0;
-	fThread = NULL;
+	fThread = 0;
 	fReadHandlers = new HandlerSet();
 }
 

@@ -9,11 +9,13 @@
 #include <time.h>
 
 RTPSource::RTPSource(int streamType, MediaSubsession &subsession, TaskScheduler &task)
-: fStreamType(streamType), fRecvBuf(NULL), fRTPPayloadFormat(subsession.rtpPayloadFormat()), fTimestampFrequency(subsession.rtpTimestampFrequency()),
-fSSRC(rand()), fTask(&task), fSvrAddr(0), fRtspSock(NULL), fRtcpChannelId(subsession.rtcpChannelId), fCodecName(NULL),
-fReceptionStatsDB(NULL), fRtcpInstance(NULL),
-fFrameHandler(NULL), fFrameHandlerData(NULL), fIsStartFrame(false), fBeginFrame(false), fExtraData(NULL), fExtraDataSize(0),
-fRtpHandler(NULL), fRtpHandlerData(NULL), fRtcpHandler(NULL), fRtcpHandlerData(NULL), fFrameType(FRAME_TYPE_ETC)
+: fRTPPayloadFormat(subsession.rtpPayloadFormat()), fTimestampFrequency(subsession.rtpTimestampFrequency()),
+fSSRC(rand()), fCodecName(NULL), fFrameType(FRAME_TYPE_ETC), fStreamType(streamType),
+fIsStartFrame(false), fBeginFrame(false), fExtraData(NULL), fExtraDataSize(0),
+fReceptionStatsDB(NULL), fRtcpInstance(NULL), fSvrAddr(0),
+fFrameHandler(NULL), fFrameHandlerData(NULL), fRtspSock(NULL), fRtcpChannelId(subsession.rtcpChannelId),
+fTask(&task), fRecvBuf(NULL),
+fRtpHandler(NULL), fRtpHandlerData(NULL), fRtcpHandler(NULL), fRtcpHandlerData(NULL)
 {
 	fReorderingBuffer = new ReorderingPacketBuffer();
 
@@ -141,7 +143,7 @@ void RTPSource::rtpReadHandler(char *buf, int len, struct sockaddr_in &fromAddre
 {
 	bool readSuccess = false;
 
-	if (len < sizeof(RTP_HEADER))
+	if (len < (int)sizeof(RTP_HEADER))
 		return;
 
 	if (fSvrAddr == 0)
@@ -262,7 +264,7 @@ void RTPSource::incomingRtpPacketHandler1()
 {
 	struct sockaddr_in fromAddress;
 	int len = MAX_RTP_SIZE;
-	int addressSize = sizeof(fromAddress);
+	//int addressSize = sizeof(fromAddress);
 	int bytesRead;
 
 	bytesRead = fRtpSock.readSocket1(fRecvBuf, len, fromAddress);
@@ -287,7 +289,7 @@ void RTPSource::incomingRtcpPacketHandler1()
 {
 	struct sockaddr_in fromAddress;
 	int len = MAX_RTP_SIZE;
-	int addressSize = sizeof(fromAddress);
+//	int addressSize = sizeof(fromAddress);
 	int bytesRead;
 
 	bytesRead = fRtcpSock.readSocket1(fRecvBuf, len, fromAddress);
@@ -304,15 +306,15 @@ void RTPSource::incomingRtcpPacketHandler1()
 
 void RTPSource::rtcpReadHandler(char *buf, int len, struct sockaddr_in &fromAddress)
 {
-	if (len < sizeof(RTCP_HEADER))
+	if (len < (int)sizeof(RTCP_HEADER))
 		return;
 
-	unsigned rtcpHdr = ntohl(*(unsigned*)buf);
+//	unsigned rtcpHdr = ntohl(*(unsigned*)buf);
 
-	RTCP_HEADER *p = (RTCP_HEADER *)buf;
+//	RTCP_HEADER *p = (RTCP_HEADER *)buf;
 
-	unsigned char pt = p->pt;
-	unsigned short length = 4*ntohs(p->length);
+//	unsigned char pt = p->pt;
+//	unsigned short length = 4*ntohs(p->length);
 
 	if (fRtcpInstance) {
 		fRtcpInstance->rtcpPacketHandler(buf, len);

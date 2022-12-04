@@ -3,7 +3,7 @@
 #include "util.h"
 
 RTPPacketBuffer::RTPPacketBuffer() : fBuf(NULL), fLength(0), fVersion(0), fPadding(0), fExtension(0), fCSRCCount(0),
-fMarkerBit(0), fPayloadType(0), fSequenceNum(0), fTimestamp(0), fSSRC(0), fNextPacket(NULL), fIsFirstPacket(false), fExtTimestamp(0)
+fMarkerBit(0), fPayloadType(0), fSequenceNum(0), fTimestamp(0), fSSRC(0), fExtTimestamp(0), fIsFirstPacket(false), fNextPacket(NULL) 
 {
 	fBuf = new uint8_t[MAX_RTP_PACKET_SIZE];
 	fCurPtr = fBuf;
@@ -28,7 +28,7 @@ int RTPPacketBuffer::payloadLen()
 
 bool RTPPacketBuffer::packetHandler(uint8_t *buf, int len)
 {
-	if (len < sizeof(RTP_HEADER) || len > MAX_RTP_PACKET_SIZE) {
+	if (len < (int)sizeof(RTP_HEADER) || len > MAX_RTP_PACKET_SIZE) {
 		DPRINTF("invalid rtp length %u\n", len);
 		return false;
 	}

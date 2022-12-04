@@ -37,7 +37,7 @@ public:
 	static unsigned short	nServerPortRangeMin;
 	static unsigned short	nServerPortRangeMax;
 
-	static void DebugPrint(char *lpszFormat, ...);
+	static void DebugPrint(const char *lpszFormat, ...);
 	static void SetDebugFlag(int flag);
 	static void UnsetDebugFlag(int flag);
 };

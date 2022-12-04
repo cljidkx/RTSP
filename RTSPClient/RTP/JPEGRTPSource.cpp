@@ -261,7 +261,7 @@ static void makeDefaultQtables(unsigned char* resultTables, unsigned Q)
 void JPEGRTPSource::processFrame(RTPPacketBuffer *packet)
 {
 	uint8_t *buf = packet->payload();
-	int len = packet->payloadLen();
+	unsigned int len = packet->payloadLen();
 
 	uint8_t *jpeg_buf = new uint8_t[MAX_JPEG_HEADER_SIZE+len];
 	memcpy(&jpeg_buf[MAX_JPEG_HEADER_SIZE], buf, len);

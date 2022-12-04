@@ -245,7 +245,7 @@ int H264RTPSource::parseSpropParameterSets(char *spropParameterSets)
 	if (spropParameterSets == NULL)
 		return -1;
 
-	unsigned int config_size = 0, sps_size = 0;
+	unsigned int sps_size = 0;
 
 	fExtraData = parseH264ConfigStr(spropParameterSets, fExtraDataSize, sps_size);
         	

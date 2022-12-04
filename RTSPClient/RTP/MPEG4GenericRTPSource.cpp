@@ -75,7 +75,7 @@ void MPEG4GenericRTPSource::processFrame(RTPPacketBuffer *packet)
 	}
 
 	uint8_t *ptr = &buf[resultSpecialHeaderSize];
-	for (int i = 0; i < fNumAUHeaders; i++) {
+	for (unsigned i = 0; i < fNumAUHeaders; i++) {
 		copyToFrameBuffer(ptr, fAUHeaders[i].size);
 		ptr += fAUHeaders[i].size;
 

@@ -4,8 +4,8 @@ CXX = g++
 INC =	-I./Common -I./OS_Common -I./Sock -I./Util \
 		-I./RTSPClient/Common -I./RTSPClient/RTCP -I./RTSPClient/RTP -I./RTSPClient/RTSP \
 		-I./RTSPServer/Common -I./RTSPServer/RTSP
-CFLAGS = -fno-stack-protector -Wall -W -O2 -fPIC -g -DLINUX $(INC)
-CXXFLAGS = -fno-stack-protector -Wall -W -O2 -fPIC -g -DLINUX $(INC)
+CFLAGS = -fno-stack-protector -Wall -W -Os -fPIC -g -DLINUX $(INC)
+CXXFLAGS = -fno-stack-protector -Wall -W -Os -fPIC -g -DLINUX $(INC)
 AR = ar
 RANLIB = ranlib
 
