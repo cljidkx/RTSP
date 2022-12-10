@@ -124,7 +124,7 @@ bool MediaSession::initializeWithSDP(char const* sdpDescription)
 		// or "m=<medium_name> <client_portNum>/<num_ports> RTP/AVP <fmt>"
 		// (Should we be checking for >1 payload format number here?)#####
 		char* mediumName = strDupSize(sdpLine); // ensures we have enough space
-		char* protocolName = NULL;
+		char const* protocolName = NULL;
 		unsigned payloadFormat;
 		if ((sscanf(sdpLine, "m=%s %hu RTP/AVP %u",
 			mediumName, &subsession->fClientPortNum, &payloadFormat) == 3 ||
@@ -420,7 +420,7 @@ char* MediaSession::lookupPayloadFormat(unsigned char rtpPayloadType,
 {
 	// Look up the codec name and timestamp frequency for known (static)
 	// RTP payload formats.
-	char* temp = NULL;
+	char const* temp = NULL;
 	switch (rtpPayloadType) {
 		case 0: {temp = "PCMU"; freq = 8000; nCh = 1; break;}
 		case 2: {temp = "G726-32"; freq = 8000; nCh = 1; break;}
@@ -481,7 +481,7 @@ void MediaSubsessionIterator::reset()
 ////////// MediaSubsession //////////
 
 MediaSubsession::MediaSubsession(MediaSession& parent)
-: sessionId(NULL), serverPortNum(0),
+: sessionId(NULL), serverPortNum(0), fRTPSource(NULL),
 fParent(parent), fNext(NULL),
 fConnectionEndpointName(NULL),
 fClientPortNum(0), fRTPPayloadFormat(0xFF),
@@ -497,8 +497,7 @@ fCpresent(false), fRandomaccessindication(false),
 fConfig(NULL), fMode(NULL), fSpropParameterSets(NULL),
 fPropVps(NULL), fPropSps(NULL), fPropPps(NULL),
 fPlayStartTime(0.0), fPlayEndTime(0.0),
-fVideoWidth(0), fVideoHeight(0), fVideoFPS(0), fNumChannels(1), fScale(1.0f), fNPT_PTS_Offset(0.0f),
-fRTPSource(NULL)
+fVideoWidth(0), fVideoHeight(0), fVideoFPS(0), fNumChannels(1), fScale(1.0f), fNPT_PTS_Offset(0.0f)
 {
 	rtpInfo.seqNum = 0; rtpInfo.timestamp = 0; rtpInfo.infoIsNew = false;
 }
@@ -759,7 +758,9 @@ bool MediaSubsession::parseSDPAttribute_fmtp(char const* sdpLine)
 	// Later: (i) check that payload format number matches; #####
 	//        (ii) look for other parameters also (generalize?) #####
 	do {
-		if (strncmp(sdpLine, "a=fmtp:", 7) != 0) break; sdpLine += 7;
+		if (strncmp(sdpLine, "a=fmtp:", 7) != 0)
+			break;
+		sdpLine += 7;
 		while (isdigit(*sdpLine)) ++sdpLine;
 
 		// The remaining "sdpLine" should be a sequence of

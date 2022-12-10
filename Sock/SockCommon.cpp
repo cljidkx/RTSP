@@ -43,7 +43,7 @@ int initializeWinsockIfNecessary(void) {
 #define initializeWinsockIfNecessary()	1
 #endif
 
-void socketErr(char *lpszFormat,...)
+void socketErr(char const* lpszFormat,...)
 {
 	va_list args;
 	int len;
@@ -72,7 +72,7 @@ void socketErr(char *lpszFormat,...)
 	sprintf(tmp, "%d\n", WSAGetLastError());
 	DPRINTF0(tmp);
 #else
-	fprintf(stdout, buffer);
+	fprintf(stdout, "%s",buffer);
 	fprintf(stdout, "%d\n", WSAGetLastError());
 #endif
 

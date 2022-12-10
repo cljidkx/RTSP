@@ -164,14 +164,14 @@ connect_fail:
 	return -2;
 }
 
-int RTSPClient::sendRequest(char *str, char *tag)
+int RTSPClient::sendRequest(char *str, const char *tag)
 {
 	if (RTSPCommonEnv::nDebugFlag&DEBUG_FLAG_RTSP)
 		DPRINTF("Sending Request:\n%s\n", str);
 
 	int ret = fRtspSock.writeSocket(str, strlen(str));
 	if (ret <= 0) {
-		if (tag == NULL) tag = "";
+		if (tag == NULL) tag = (char *)"";
 		DPRINTF("send() failed: %s, err: %d\n", tag, WSAGetLastError());
 	}
 
@@ -227,7 +227,6 @@ bool RTSPClient::getResponse(char const* tag,
 
 unsigned RTSPClient::getResponse1(char*& responseBuffer, unsigned responseBufferSize) 
 {
-	int sock = fRtspSock.sock();
 	struct sockaddr_in fromAddress;
 
 	if (responseBufferSize == 0) return 0; // just in case...
@@ -447,7 +446,7 @@ bool RTSPClient::parseRTSPMessage()
 {
 	char *responseBuffer = fResponseBuffer;
 	char *p = fResponseBuffer;
-	bool haveSeenNonCRLF = false;
+//	bool haveSeenNonCRLF = false;
 	bool isCompleted = false;
 
 	for (; p <= fResponseBuffer+fResponseBufferIdx-4; ++p)
@@ -455,7 +454,8 @@ bool RTSPClient::parseRTSPMessage()
 		isCompleted = false;
 		// Check whether we have "\r\n\r\n" (or "\r\r" or "\n\n"):
 		if (*p != '\r' && *p != '\n') {
-			haveSeenNonCRLF = true;
+//			haveSeenNonCRLF = true;
+			continue;
 		} else {
 			if ((*p == '\r' && *(p+1) == '\n' && *(p+2) == '\r' && *(p+3) == '\n')
 				|| (*(p+2) == '\r' && *(p+3) == '\r')
@@ -478,7 +478,7 @@ bool RTSPClient::parseRTSPMessage()
 				responseBuffer = p+4;
 
 				isCompleted = true;
-				haveSeenNonCRLF = false;
+//				haveSeenNonCRLF = false;
 			}
 		}
 	}
@@ -549,7 +549,7 @@ void RTSPClient::readRTPOverTCP()
 
 	fRtpBufferIdx += result;
 
-	if (fRtpBufferIdx != fTCPReadSize) 
+	if ((unsigned int)fRtpBufferIdx != fTCPReadSize) 
 		return;	
 
 	if (fNextTCPSource) {
@@ -603,7 +603,7 @@ char* RTSPClient::sendOptionsCmd(const char *url, char *username, char *password
 		char* authenticatorStr
 			= createAuthenticatorString(authenticator, "OPTIONS", url);
 
-		char* const cmdFmt =
+		const char* cmdFmt =
 			"OPTIONS %s RTSP/1.0\r\n"
 			"CSeq: %d\r\n"
 			"%s"
@@ -687,7 +687,7 @@ char* RTSPClient::describeURL(const char *url, Authenticator* authenticator, boo
 			: "Accept: application/sdp\r\n";
 
 		// (Later implement more, as specified in the RTSP spec, sec D.1 #####)
-		char* const cmdFmt =
+		char const* cmdFmt =
 			"DESCRIBE %s RTSP/1.0\r\n"
 			"CSeq: %d\r\n"
 			"%s"
@@ -706,7 +706,7 @@ char* RTSPClient::describeURL(const char *url, Authenticator* authenticator, boo
 		if (fLastSessionId)
 			sprintf(fLastSessionIdStr, "Session: %s\r\n", fLastSessionId);
 		else
-			sprintf(fLastSessionIdStr, "");
+			fLastSessionIdStr[0] = 0;
 
 		unsigned cmdSize = strlen(cmdFmt)
 			+ strlen(url)
@@ -1050,7 +1050,7 @@ bool RTSPClient::setupMediaSubsession(MediaSubsession& subsession, bool streamOu
 
 		char const *prefix, *separator, *suffix;
 		constructSubsessionURL(subsession, prefix, separator, suffix);
-		char* transportFmt;
+		char const* transportFmt;
 
 		if (strcmp(subsession.protocolName(), "UDP") == 0) {
 			char const* setupFmt = "SETUP %s%s RTSP/1.0\r\n";
@@ -1105,7 +1105,7 @@ bool RTSPClient::setupMediaSubsession(MediaSubsession& subsession, bool streamOu
 		}
 
 		// (Later implement more, as specified in the RTSP spec, sec D.1 #####)
-		char* const cmdFmt =
+		char const* cmdFmt =
 			"%s"
 			"CSeq: %d\r\n"
 			"%s"
@@ -1329,7 +1329,7 @@ bool RTSPClient::playMediaSession(MediaSession& session, bool response,
 		// And then a "Range:" string:
 		char* rangeStr = createRangeString(start, end);
 
-		char* const cmdFmt =
+		char const* cmdFmt =
 			"PLAY %s RTSP/1.0\r\n"
 			"CSeq: %d\r\n"
 			"Session: %s\r\n"
@@ -1424,7 +1424,7 @@ bool RTSPClient::pauseMediaSession(MediaSession& session)
 			= createAuthenticatorString(&fCurrentAuthenticator, "PAUSE", fBaseURL);
 
 		char const* sessURL = sessionURL(session);
-		char* const cmdFmt =
+		char const* cmdFmt =
 			"PAUSE %s RTSP/1.0\r\n"
 			"CSeq: %d\r\n"
 			"Session: %s\r\n"
@@ -1730,7 +1730,7 @@ char* RTSPClient::createAuthenticatorString(Authenticator const* authenticator, 
 			// We've been provided a filled-in authenticator, so use it:
 			char* authenticatorStr;
 			if (authenticator->nonce() != NULL) { // Digest authentication
-				char* const authFmt =
+				char const* authFmt =
 					"Authorization: Digest username=\"%s\", realm=\"%s\", "
 					"nonce=\"%s\", uri=\"%s\", response=\"%s\"\r\n";
 				char const* response = authenticator->computeDigestResponse(cmd, url);
@@ -1743,7 +1743,7 @@ char* RTSPClient::createAuthenticatorString(Authenticator const* authenticator, 
 					authenticator->nonce(), url, response);
 				authenticator->reclaimDigestResponse(response);
 			} else { // Basic authentication
-				char* const authFmt = "Authorization: Basic %s\r\n";
+				char const* authFmt = "Authorization: Basic %s\r\n";
 
 				unsigned usernamePasswordLength = strlen(authenticator->username()) + 1 + strlen(authenticator->password());
 				char* usernamePassword = new char[usernamePasswordLength+1];
@@ -1829,7 +1829,7 @@ void RTSPClient::sendGetParam()
 	getMediaSessionParameter(*fMediaSession, NULL, str);
 }
 
-bool RTSPClient::setMediaSessionParameter(MediaSession& session,
+bool RTSPClient::setMediaSessionParameter(MediaSession& /*session*/,
 										  char const* parameterName,
 										  char const* parameterValue) 
 {
@@ -1848,7 +1848,7 @@ bool RTSPClient::setMediaSessionParameter(MediaSession& session,
 			= createAuthenticatorString(&fCurrentAuthenticator,
 			"SET_PARAMETER", fBaseURL);
 
-		char* const cmdFmt =
+		char const* cmdFmt =
 			"SET_PARAMETER %s RTSP/1.0\r\n"
 			"CSeq: %d\r\n"
 			"Session: %s\r\n"
@@ -1915,7 +1915,7 @@ bool RTSPClient::getMediaSessionParameter(MediaSession& /*session*/,
 			"GET_PARAMETER", fBaseURL);
 
 		if (haveParameterName) {
-			char* const cmdFmt =
+			char const* cmdFmt =
 				"GET_PARAMETER %s RTSP/1.0\r\n"
 				"CSeq: %d\r\n"
 				"Session: %s\r\n"
@@ -1943,7 +1943,7 @@ bool RTSPClient::getMediaSessionParameter(MediaSession& /*session*/,
 				parameterNameLen + 2, // the "+ 2" is for the \r\n after the parameter name
 				parameterName);
 		} else {
-			char* const cmdFmt =
+			char const* cmdFmt =
 				"GET_PARAMETER %s RTSP/1.0\r\n"
 				"CSeq: %d\r\n"
 				"Session: %s\r\n"
@@ -2087,7 +2087,7 @@ bool RTSPClient::teardownMediaSession(MediaSession &session)
 			"TEARDOWN", fBaseURL);
 
 		char const* sessURL = sessionURL(session);
-		char* const cmdFmt =
+		char const* cmdFmt =
 			"TEARDOWN %s RTSP/1.0\r\n"
 			"CSeq: %d\r\n"
 			"Session: %s\r\n"

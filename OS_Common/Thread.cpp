@@ -26,5 +26,5 @@ void THREAD_DESTROY(THREAD *thread)
 	if (*thread)
 		CloseHandle(*thread);
 #endif
-	*thread = NULL;
+	*thread = 0;
 }

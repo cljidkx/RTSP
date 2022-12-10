@@ -230,7 +230,9 @@ void RTCPInstance::rtcpPacketHandler(char *buf, int len)
 			if (length > packetSize) break;
 
 			// Assume that each RTCP subpacket begins with a 4-byte SSRC:
-			if (length < 4) break; length -= 4;
+			if (length < 4)
+				break;
+			length -= 4;
 			reportSenderSSRC = ntohl(*(unsigned*)pkt); ADVANCE(4);
 
 			bool subPacketOK = false;
@@ -239,8 +241,9 @@ void RTCPInstance::rtcpPacketHandler(char *buf, int len)
 #ifdef DEBUG
 					DPRINTF("SR\n");
 #endif
-					if (length < 20) break; length -= 20;
-
+					if (length < 20)
+						break;
+					length -= 20;
 					// Extract the NTP timestamp, and note this:
 					unsigned NTPmsw = ntohl(*(unsigned*)pkt); ADVANCE(4);
 					unsigned NTPlsw = ntohl(*(unsigned*)pkt); ADVANCE(4);

@@ -25,7 +25,7 @@ unsigned short RTSPCommonEnv::nServerPortRangeMin = 20000;
 unsigned short RTSPCommonEnv::nServerPortRangeMax = 65535;
 
 #ifndef ANDROID
-void RTSPCommonEnv::DebugPrint(char *lpszFormat, ...)
+void RTSPCommonEnv::DebugPrint(const char *lpszFormat, ...)
 {
 	va_list args;
 	int len;
@@ -46,7 +46,7 @@ void RTSPCommonEnv::DebugPrint(char *lpszFormat, ...)
 	if (nDebugPrint == 0) fprintf(stdout, buffer);
 	else if (nDebugPrint == 1) OutputDebugString(buffer);
 #else
-	fprintf(stdout, buffer);
+	fprintf(stdout, "%s",buffer);
 #endif
 
 	free(buffer);

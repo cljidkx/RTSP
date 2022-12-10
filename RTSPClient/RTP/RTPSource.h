@@ -12,7 +12,7 @@
 
 #define RTCP_SEND_DURATION	(2)
 
-typedef enum RTP_FRAME_TYPE { FRAME_TYPE_VIDEO, FRAME_TYPE_AUDIO, FRAME_TYPE_ETC };
+enum RTP_FRAME_TYPE { FRAME_TYPE_VIDEO, FRAME_TYPE_AUDIO, FRAME_TYPE_ETC };
 typedef void (*FrameHandlerFunc)(void *arg, RTP_FRAME_TYPE frame_type, int64_t timestamp, uint8_t *buf, int len);
 typedef void (*RTPHandlerFunc)(void *arg, char *trackId, char *buf, int len);
 
