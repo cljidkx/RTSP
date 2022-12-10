@@ -10,3 +10,7 @@ parts of this project's source code are from open source streaming library live5
 as many developer knows live555 source code is terribly complicated. 
 
 so i decided to simplify it and make cross-platform library.
+
+# LIB
+
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:./

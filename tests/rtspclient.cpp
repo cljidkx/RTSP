@@ -4,7 +4,7 @@
 #endif
 
 //#define RTSPCLIENT_DLL
-//#define DEBUG
+#define DEBUG
 #ifdef LINUX
 #undef RTSPCLIENT_DLL
 #endif
@@ -55,8 +55,10 @@ static void frameHandler(void *arg, DLL_RTP_FRAME_TYPE frame_type, __int64 times
 static void frameHandler(void *arg, RTP_FRAME_TYPE frame_type, int64_t timestamp, unsigned char *buf, int len)
 #endif
 {
-	if (fp_dump)
+	if (fp_dump && frame_type==0) {
+		printf("buf len %d\n", len);
 		fwrite(buf, len, 1, fp_dump);
+	}
 }
 
 static void closeHandler(void* arg, int err, int result)
@@ -102,6 +104,8 @@ again:
 	if (rtspClient->openURL(strURL, 0, 2) == 0)
 #endif
 	{
+		fwrite(rtspClient->videoExtraData(), rtspClient->videoExtraDataSize(), 1, fp_dump);
+
 #ifdef RTSPCLIENT_DLL
 		if (rtspclient_play_url(rtspClient, frameHandler, rtspClient, closeHandler, rtspClient) == 0)
 #else
