@@ -109,17 +109,28 @@ again:
 #ifdef RTSPCLIENT_DLL
 		if (rtspclient_play_url(rtspClient, frameHandler, rtspClient, closeHandler, rtspClient) == 0)
 #else
-		if (rtspClient->playURL(frameHandler, rtspClient, closeHandler, rtspClient) == 0)
+		if (rtspClient->playURL(NULL, rtspClient, closeHandler, rtspClient) == 0)
 #endif
 		{
+			unsigned dataSize=1024*1024*4, outSize=0;
+			uint8_t *data = new uint8_t[dataSize];
+			uint8_t *outData = NULL;
+			RTP_FRAME_TYPE  DataType;
+			int64_t         dataTimestamp;
 			char c;
-			while (c = mygetch() != 'q')
+			struct timespec timeout;
+			timeout.tv_sec = time(NULL) + 2;
+			timeout.tv_nsec = 0;
+//			while (c = mygetch() != 'q')
+			while(1)
 			{
-#ifdef WIN32
-				Sleep(10);
-#else
-				usleep(10000);
-#endif
+				rtspClient->setOutputData(data, dataSize);
+				outData = rtspClient->getOutputDataTimeOut(outSize, DataType, dataTimestamp, &timeout);
+				timeout.tv_sec = time(NULL) + 2;
+				printf("buf len %d type %d time %ld\n", outSize, DataType, dataTimestamp);
+				if (outData && DataType==0) {
+					fwrite(outData, outSize, 1, fp_dump);
+				}
 			}
 		}
 	}	
@@ -130,6 +141,7 @@ exit:
 	rtspClient->closeURL();
 #endif
 
+	printf("1closeURL\n");
 	if (--retry >  0)
 		goto again;
 
@@ -138,8 +150,10 @@ exit:
 #else
 	delete rtspClient;
 #endif
+	printf("2closeURL\n");
 
 	if (fp_dump) fclose(fp_dump);
+	printf("3closeURL\n");
 
 	return 0;
 }
