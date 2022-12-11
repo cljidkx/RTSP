@@ -6,6 +6,9 @@
 
 #include <time.h>
 
+static pthread_mutex_t g_tMutex  = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t  g_tConVar = PTHREAD_COND_INITIALIZER;
+
 unsigned char* parseH264ConfigStr(char const* configStr, unsigned int& configSize, unsigned int& spsSize);
 unsigned char* parseGeneralConfigStr(char const* configStr, unsigned& configSize);
 
@@ -55,6 +58,9 @@ RTSPClient::RTSPClient()
 	fRTPReceiveHandler = fRTCPReceiveHandler = NULL;
 	fRTPReceiveHandlerData = fRTCPReceiveHandlerData = NULL;
 
+	fOutputData		= NULL;
+	fOutputDataFlag = true;
+
 	fTask = new TaskScheduler();
 }
 
@@ -69,6 +75,7 @@ RTSPClient::~RTSPClient()
 
 void RTSPClient::reset()
 {
+	pthread_cond_signal(&g_tConVar);
 	fTask->stopEventLoop();
 
 	if (fRtspSock.isOpened()) {
@@ -1648,6 +1655,72 @@ int RTSPClient::openURL(const char *url, int streamType, int timeout, bool rtpOn
 	return 0;
 }
 
+static void outputFrameHandler(void *arg, RTP_FRAME_TYPE frame_type, int64_t timestamp, unsigned char *buf, int len) {
+	RTSPClient *client = (RTSPClient *)arg;
+
+	if (client->fOutputDataSize < (unsigned)len)
+		len = client->fOutputDataSize;
+
+	pthread_mutex_lock(&g_tMutex);
+	if (!client->fOutputDataFlag) {
+		memcpy(client->fOutputData, buf, len);
+		client->fOutputDataSize = len;
+		client->fOutputDataFlag = true;
+		client->fOutputDataType = frame_type;
+		client->fOutputDataTimestamp = timestamp;
+		pthread_cond_signal(&g_tConVar);
+		pthread_mutex_unlock(&g_tMutex);
+		return;
+	}
+
+	pthread_cond_wait(&g_tConVar, &g_tMutex);
+	if (!client->fOutputDataFlag) {
+		memcpy(client->fOutputData, buf, len);
+		client->fOutputDataSize = len;
+		client->fOutputDataFlag = true;
+		client->fOutputDataType = frame_type;
+		client->fOutputDataTimestamp = timestamp;
+		pthread_cond_signal(&g_tConVar);
+	}
+
+	pthread_mutex_unlock(&g_tMutex);
+}
+
+void RTSPClient::setOutputData(uint8_t *buf, unsigned size)
+{
+	pthread_mutex_lock(&g_tMutex);
+	fOutputData = buf;
+	fOutputDataSize = size;
+	fOutputDataFlag = false;
+	pthread_cond_signal(&g_tConVar);
+	pthread_mutex_unlock(&g_tMutex);
+	return;
+}
+
+uint8_t *RTSPClient::getOutputDataTimeOut(unsigned &size, RTP_FRAME_TYPE &frame_type, int64_t &timestamp, struct timespec *timeout)
+{
+	uint8_t *buf = NULL;
+	pthread_mutex_lock(&g_tMutex);
+	if (fOutputDataFlag) {
+		size = fOutputDataSize;
+		buf = fOutputData;
+		frame_type = fOutputDataType;
+		timestamp = fOutputDataTimestamp;
+		pthread_mutex_unlock(&g_tMutex);
+		return buf;
+	}
+
+	pthread_cond_timedwait(&g_tConVar, &g_tMutex, timeout);
+	if (fOutputDataFlag) {
+		size = fOutputDataSize;
+		buf = fOutputData;
+		frame_type = fOutputDataType;
+		timestamp = fOutputDataTimestamp;
+	}
+	pthread_mutex_unlock(&g_tMutex);
+	return buf;
+}
+
 int RTSPClient::playURL(FrameHandlerFunc frameHandler, void *frameHandlerData, 
 						CloseHandlerFunc closeHandler, void *closeHandlerData, 
 						PacketReceiveHandlerFunc rtpReceiveHandler, void *rtpReceiveHandlerData,
@@ -1658,6 +1731,13 @@ int RTSPClient::playURL(FrameHandlerFunc frameHandler, void *frameHandlerData,
 
 	if (!playMediaSession(*fMediaSession, true))
 		return -1;
+
+	FrameHandlerFunc fFrameHandler = frameHandler;
+	void * fFrameHandlerData = frameHandlerData;
+	if (fFrameHandler == NULL) {
+		fFrameHandler = outputFrameHandler;
+		fFrameHandlerData = (void *)this;
+	}
 
 	fCloseHandler = closeHandler;
 	fCloseHandlerData = closeHandlerData;
@@ -1673,7 +1753,7 @@ int RTSPClient::playURL(FrameHandlerFunc frameHandler, void *frameHandlerData,
 	while ((subsession=iter->next()) != NULL)
 	{
 		if (subsession->fRTPSource)
-			subsession->fRTPSource->startNetworkReading(frameHandler, frameHandlerData, rtpHandlerCallback, this, rtcpHandlerCallback, this);
+			subsession->fRTPSource->startNetworkReading(fFrameHandler, fFrameHandlerData, rtpHandlerCallback, this, rtcpHandlerCallback, this);
 	}
 
 	if (fTCPStreamIdCount > 0) fTCPReadingState = AWAITING_DOLLAR;

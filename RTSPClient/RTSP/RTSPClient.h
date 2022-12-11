@@ -31,6 +31,10 @@ public:
 	int sendPlay(double start = 0.0f, double end = -1.0f, float scale = 1.0f);
 	int sendSetParam(char *name, char *value);
 
+	void setOutputData(uint8_t *buf, unsigned size);
+	uint8_t *getOutputDataTimeOut(unsigned &size, RTP_FRAME_TYPE &frame_type,
+			int64_t &timestamp, struct timespec *timeout);
+
 public:
 	const char* videoCodec() { return fVideoCodec; }
 	const char* audioCodec() { return fAudioCodec; }
@@ -192,6 +196,13 @@ protected:
 	void*						fRTPReceiveHandlerData;
 	PacketReceiveHandlerFunc	fRTCPReceiveHandler;
 	void*						fRTCPReceiveHandlerData;
+
+public:
+	uint8_t*		fOutputData;
+	unsigned        fOutputDataSize;
+	bool			fOutputDataFlag;
+	RTP_FRAME_TYPE	fOutputDataType;
+	int64_t			fOutputDataTimestamp;
 };
 
 #endif
