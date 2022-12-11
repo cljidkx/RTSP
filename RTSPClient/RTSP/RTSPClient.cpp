@@ -1658,13 +1658,11 @@ int RTSPClient::openURL(const char *url, int streamType, int timeout, bool rtpOn
 static void outputFrameHandler(void *arg, RTP_FRAME_TYPE frame_type, int64_t timestamp, unsigned char *buf, int len) {
 	RTSPClient *client = (RTSPClient *)arg;
 
-	if (client->fOutputDataSize < (unsigned)len)
-		len = client->fOutputDataSize;
-
 	pthread_mutex_lock(&g_tMutex);
 	if (!client->fOutputDataFlag) {
-		memcpy(client->fOutputData, buf, len);
-		client->fOutputDataSize = len;
+		if (client->fOutputDataSize >= (unsigned)len)
+			client->fOutputDataSize = len;
+		memcpy(client->fOutputData, buf, client->fOutputDataSize);
 		client->fOutputDataFlag = true;
 		client->fOutputDataType = frame_type;
 		client->fOutputDataTimestamp = timestamp;
@@ -1675,8 +1673,9 @@ static void outputFrameHandler(void *arg, RTP_FRAME_TYPE frame_type, int64_t tim
 
 	pthread_cond_wait(&g_tConVar, &g_tMutex);
 	if (!client->fOutputDataFlag) {
-		memcpy(client->fOutputData, buf, len);
-		client->fOutputDataSize = len;
+		if (client->fOutputDataSize >= (unsigned)len)
+			client->fOutputDataSize = len;
+		memcpy(client->fOutputData, buf, client->fOutputDataSize);
 		client->fOutputDataFlag = true;
 		client->fOutputDataType = frame_type;
 		client->fOutputDataTimestamp = timestamp;
