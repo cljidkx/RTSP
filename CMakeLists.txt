@@ -12,7 +12,11 @@ set(CMAKE_SYSTEM_NAME Linux)
 
 set(CMAKE_INSTALL_PREFIX /usr)
 
-SET(CMAKE_CXX_FLAGS "-fno-stack-protector -Wall -W -Os -fPIC -g -DLINUX")
+SET(CMAKE_BUILD_TYPE "Debug")
+SET(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -O0 -Wall -g2 -ggdb")
+SET(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -O3 -Wall")
+
+OPTION(RELEASE "Release" OFF)
 
 include_directories(./Common ./Sock
     ./OS_Common
