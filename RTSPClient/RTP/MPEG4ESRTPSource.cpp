@@ -34,8 +34,11 @@ void MPEG4ESRTPSource::processFrame(RTPPacketBuffer *packet)
 		copyToFrameBuffer(buf, len);
 
 	if (packet->markerBit()) {
-		if (fFrameHandler)
-			fFrameHandler(fFrameHandlerData, fFrameType, timestamp, fFrameBuffer, fFrameBufferPos);
+		if (fFrameHandler) {
+			fRtpFrameBuffer->frameBufLen = fFrameBufferPos;
+			fRtpFrameBuffer->timestamp = timestamp;
+			fFrameHandler(fFrameHandlerData, fRtpFrameBuffer, 0);
+		}
 		resetFrameBuffer();
 		fBeginFrame = false;
 	}

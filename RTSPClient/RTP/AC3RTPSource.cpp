@@ -30,8 +30,11 @@ void AC3RTPSource::processFrame(RTPPacketBuffer *packet)
 	// The RTP "M" (marker) bit indicates the last fragment of a frame.
 	// In case the sender did not set the "M" bit correctly, we also test for FT == 0:
 	if (packet->markerBit() || FT == 0) {
-		if (fFrameHandler)
-			fFrameHandler(fFrameHandlerData, fFrameType, timestamp, fFrameBuffer, fFrameBufferPos);
+		if (fFrameHandler) {
+			fRtpFrameBuffer->frameBufLen = fFrameBufferPos;
+			fRtpFrameBuffer->timestamp = timestamp;
+			fFrameHandler(fFrameHandlerData, fRtpFrameBuffer, 0);
+		}
 		resetFrameBuffer();
 		fBeginFrame = false;
 	}

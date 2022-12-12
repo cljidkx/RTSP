@@ -1655,34 +1655,35 @@ int RTSPClient::openURL(const char *url, int streamType, int timeout, bool rtpOn
 	return 0;
 }
 
-static void outputFrameHandler(void *arg, RTP_FRAME_TYPE frame_type, int64_t timestamp, unsigned char *buf, int len) {
-	RTSPClient *client = (RTSPClient *)arg;
+void cleanup(void* mutex)
+{ 
+	pthread_mutex_unlock((pthread_mutex_t*)mutex);
+}
 
-	pthread_mutex_lock(&g_tMutex);
-	if (!client->fOutputDataFlag) {
-		if (client->fOutputDataSize >= (unsigned)len)
-			client->fOutputDataSize = len;
-		memcpy(client->fOutputData, buf, client->fOutputDataSize);
+static void outputFrameHandler(void *arg, rtpFrame *frame, int cmd) {
+	RTSPClient *client = (RTSPClient *)arg;
+	
+	if (cmd == 1) {
+		pthread_cleanup_push(cleanup, &g_tMutex);
+		pthread_mutex_lock(&g_tMutex);
+		while (client->fOutputDataFlag)
+			pthread_cond_wait(&g_tConVar, &g_tMutex);
+		frame->frameBuf = client->fOutputData;
+		frame->frameBufLen = client->fOutputDataSize;
+		printf("outputFrameHandler %p %d \n", frame->frameBuf, frame->frameType);
+		pthread_mutex_unlock(&g_tMutex);
+		pthread_cleanup_pop(0);
+	} else if (cmd == 0) {
+		pthread_mutex_lock(&g_tMutex);
 		client->fOutputDataFlag = true;
-		client->fOutputDataType = frame_type;
-		client->fOutputDataTimestamp = timestamp;
+		client->fOutputDataType = frame->frameType;
+		client->fOutputDataTimestamp = frame->timestamp;
+		client->fOutputDataSize = frame->frameBufLen;
+		printf("outputFrameHandler %p || %d \n",  client->fOutputData, frame->frameType);
 		pthread_cond_signal(&g_tConVar);
 		pthread_mutex_unlock(&g_tMutex);
-		return;
 	}
 
-	pthread_cond_wait(&g_tConVar, &g_tMutex);
-	if (!client->fOutputDataFlag) {
-		if (client->fOutputDataSize >= (unsigned)len)
-			client->fOutputDataSize = len;
-		memcpy(client->fOutputData, buf, client->fOutputDataSize);
-		client->fOutputDataFlag = true;
-		client->fOutputDataType = frame_type;
-		client->fOutputDataTimestamp = timestamp;
-		pthread_cond_signal(&g_tConVar);
-	}
-
-	pthread_mutex_unlock(&g_tMutex);
 }
 
 void RTSPClient::setOutputData(uint8_t *buf, unsigned size)
@@ -1720,7 +1721,7 @@ uint8_t *RTSPClient::getOutputDataTimeOut(unsigned &size, RTP_FRAME_TYPE &frame_
 	return buf;
 }
 
-int RTSPClient::playURL(FrameHandlerFunc frameHandler, void *frameHandlerData, 
+int RTSPClient::playURL(FrameHandlerFuncCmd frameHandler, void *frameHandlerData, 
 						CloseHandlerFunc closeHandler, void *closeHandlerData, 
 						PacketReceiveHandlerFunc rtpReceiveHandler, void *rtpReceiveHandlerData,
 						PacketReceiveHandlerFunc rtcpReceiveHandler, void *rtcpReceiveHandlerData)
@@ -1731,7 +1732,7 @@ int RTSPClient::playURL(FrameHandlerFunc frameHandler, void *frameHandlerData,
 	if (!playMediaSession(*fMediaSession, true))
 		return -1;
 
-	FrameHandlerFunc fFrameHandler = frameHandler;
+	FrameHandlerFuncCmd fFrameHandler = frameHandler;
 	void * fFrameHandlerData = frameHandlerData;
 	if (fFrameHandler == NULL) {
 		fFrameHandler = outputFrameHandler;

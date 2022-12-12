@@ -390,8 +390,11 @@ void JPEGRTPSource::processFrame(RTPPacketBuffer *packet)
 	copyToFrameBuffer(buf_ptr, len);
 
 	if (packet->markerBit()) {
-		if (fFrameHandler)
-			fFrameHandler(fFrameHandlerData, fFrameType, timestamp, fFrameBuffer, fFrameBufferPos);
+		if (fFrameHandler) {
+			fRtpFrameBuffer->frameBufLen = fFrameBufferPos;
+			fRtpFrameBuffer->timestamp = timestamp;
+			fFrameHandler(fFrameHandlerData, fRtpFrameBuffer, 0);
+		}
 		resetFrameBuffer();
 	}
 

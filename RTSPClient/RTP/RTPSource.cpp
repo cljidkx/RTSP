@@ -36,8 +36,10 @@ fRtpHandler(NULL), fRtpHandlerData(NULL), fRtcpHandler(NULL), fRtcpHandlerData(N
 	else if (!strcmp(subsession.mediumName(), "audio"))
 		fFrameType = FRAME_TYPE_AUDIO;
 
-	fFrameBuffer = new uint8_t[FRAME_BUFFER_SIZE];
+	fFrameBuffer = NULL;
 	fFrameBufferPos = 0;
+	fRtpFrameBuffer = new rtpFrame;
+	fRtpFrameBuffer->frameType = fFrameType;	
 
 	fLastSeqNum = fLastSeqNum2 = 0;
 	fLastTimestamp = 0;
@@ -91,7 +93,7 @@ RTPSource::~RTPSource()
 	DELETE_OBJECT(fRtcpInstance);
 
 	DELETE_ARRAY(fRecvBuf);
-	DELETE_ARRAY(fFrameBuffer);
+	DELETE_OBJECT(fRtpFrameBuffer);
 	DELETE_ARRAY(fCodecName);
 	DELETE_ARRAY(fExtraData);
 	DELETE_ARRAY(fTrackId);
@@ -99,7 +101,7 @@ RTPSource::~RTPSource()
 	DELETE_OBJECT(fReorderingBuffer);
 }
 
-void RTPSource::startNetworkReading(FrameHandlerFunc frameHandler, void *frameHandlerData, 
+void RTPSource::startNetworkReading(FrameHandlerFuncCmd frameHandler, void *frameHandlerData, 
 									RTPHandlerFunc rtpHandler, void *rtpHandlerData,
 									RTPHandlerFunc rtcpHandler, void *rtcpHandlerData)
 {
@@ -216,8 +218,10 @@ void RTPSource::processNextPacket()
 		if (fRtpHandler)
 			fRtpHandler(fRtpHandlerData, fTrackId, (char *)nextPacket->buf(), nextPacket->length());
 
-		if (fFrameHandler)
+		if (fFrameHandler) {
+			resetFrameBuffer();
 			processFrame(nextPacket);
+		}
 
 		fReorderingBuffer->releaseUsedPacket(nextPacket);
 	}
@@ -248,7 +252,9 @@ void RTPSource::processFrame(RTPPacketBuffer *packet)
 
 	if (packet->markerBit() == 1 || fLastTimestamp != packet->timestamp()) {
 		if (fFrameHandler) {
-			fFrameHandler(fFrameHandlerData, fFrameType, timestamp, fFrameBuffer, fFrameBufferPos);
+			fRtpFrameBuffer->frameBufLen = fFrameBufferPos;
+			fRtpFrameBuffer->timestamp = timestamp;
+			fFrameHandler(fFrameHandlerData, fRtpFrameBuffer, 0);
 		}
 		resetFrameBuffer();
 	}
@@ -363,6 +369,12 @@ void RTPSource::copyToFrameBuffer(uint8_t *buf, int len)
 void RTPSource::resetFrameBuffer()
 {
 	fFrameBufferPos = 0;
+	if (fFrameHandler) {
+		fRtpFrameBuffer->frameBuf = NULL;
+		fRtpFrameBuffer->frameBufLen = 0;
+		fFrameHandler(fFrameHandlerData, fRtpFrameBuffer, 1);
+		fFrameBuffer = fRtpFrameBuffer->frameBuf;
+	}
 }
 
 uint64_t RTPSource::getRealTimestamp(uint32_t timestamp)

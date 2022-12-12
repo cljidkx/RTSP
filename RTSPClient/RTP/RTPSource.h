@@ -13,6 +13,15 @@
 #define RTCP_SEND_DURATION	(2)
 
 enum RTP_FRAME_TYPE { FRAME_TYPE_VIDEO, FRAME_TYPE_AUDIO, FRAME_TYPE_ETC };
+struct rtpFrame
+{
+	uint8_t*		frameBuf;
+	unsigned		frameBufLen;
+	int64_t			timestamp;
+	RTP_FRAME_TYPE	frameType;
+};
+
+typedef void (*FrameHandlerFuncCmd)(void *arg, rtpFrame *frame, int cmd);
 typedef void (*FrameHandlerFunc)(void *arg, RTP_FRAME_TYPE frame_type, int64_t timestamp, uint8_t *buf, int len);
 typedef void (*RTPHandlerFunc)(void *arg, char *trackId, char *buf, int len);
 
@@ -24,7 +33,7 @@ public:
 	RTPSource(int streamType, MediaSubsession &subsession, TaskScheduler &task); 
 	virtual ~RTPSource();
 
-	void startNetworkReading(FrameHandlerFunc frameHandler, void *frameHandlerData, 
+	void startNetworkReading(FrameHandlerFuncCmd frameHandler, void *frameHandlerData, 
 		RTPHandlerFunc rtpHandler, void *rtpHandlerData,
 		RTPHandlerFunc rtcpHandler, void *rtcpHandlerData);
 	void stopNetworkReading();
@@ -86,7 +95,8 @@ protected:
 	
 	uint8_t*			fFrameBuffer;
 	int					fFrameBufferPos;
-	FrameHandlerFunc	fFrameHandler;
+	rtpFrame*			fRtpFrameBuffer;
+	FrameHandlerFuncCmd	fFrameHandler;
 	void*				fFrameHandlerData;
 
 	// TCP 일때만 사용

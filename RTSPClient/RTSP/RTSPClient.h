@@ -21,7 +21,7 @@ public:
 	virtual ~RTSPClient();
 
 	int openURL(const char *url, int streamType, int timeout = 2, bool rtpOnly = false);
-	int playURL(FrameHandlerFunc frameHandler, void *frameHandlerData, 
+	int playURL(FrameHandlerFuncCmd frameHandler, void *frameHandlerData, 
 		CloseHandlerFunc closeHandler, void *closeHandlerFunc,
 		PacketReceiveHandlerFunc rtpReceiveHandler = NULL, void *rtpReceiveHandlerData = NULL,
 		PacketReceiveHandlerFunc rtcpReceiveHandler = NULL, void *rtcpReceiveHandlerData = NULL);

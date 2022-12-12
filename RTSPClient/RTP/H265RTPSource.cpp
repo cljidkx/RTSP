@@ -48,8 +48,11 @@ void H265RTPSource::processFrame(RTPPacketBuffer* packet)
 
 			buf_ptr += nalUSize; len -= nalUSize;
 
-			if (fFrameHandler)
-				fFrameHandler(fFrameHandlerData, fFrameType, timestamp, fFrameBuffer, fFrameBufferPos);
+			if (fFrameHandler) {
+				fRtpFrameBuffer->frameBufLen = fFrameBufferPos;
+				fRtpFrameBuffer->timestamp = timestamp;
+				fFrameHandler(fFrameHandlerData, fRtpFrameBuffer, 0);
+			}
 			resetFrameBuffer();
 		}
 	} break;
@@ -82,8 +85,11 @@ void H265RTPSource::processFrame(RTPPacketBuffer* packet)
 	}
 
 	if (isCompleteFrame) {
-		if (fFrameHandler)
-			fFrameHandler(fFrameHandlerData, fFrameType, timestamp, fFrameBuffer, fFrameBufferPos);
+		if (fFrameHandler) {
+			fRtpFrameBuffer->frameBufLen = fFrameBufferPos;
+			fRtpFrameBuffer->timestamp = timestamp;
+			fFrameHandler(fFrameHandlerData, fRtpFrameBuffer, 0);
+		}
 		resetFrameBuffer();
 	}
 }

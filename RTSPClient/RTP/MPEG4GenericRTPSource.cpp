@@ -79,8 +79,11 @@ void MPEG4GenericRTPSource::processFrame(RTPPacketBuffer *packet)
 		copyToFrameBuffer(ptr, fAUHeaders[i].size);
 		ptr += fAUHeaders[i].size;
 
-		if (fFrameHandler)
-			fFrameHandler(fFrameHandlerData, fFrameType, timestamp, fFrameBuffer, fFrameBufferPos);
+		if (fFrameHandler) {
+			fRtpFrameBuffer->frameBufLen = fFrameBufferPos;
+			fRtpFrameBuffer->timestamp = timestamp;
+			fFrameHandler(fFrameHandlerData, fRtpFrameBuffer, 0);
+		}
 		resetFrameBuffer();
 	}
 }
