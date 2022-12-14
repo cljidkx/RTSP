@@ -9,6 +9,8 @@
 #define RECV_BUF_SIZE			(1024*1024)
 #define SEND_GET_PARAM_DURATION	(50)
 
+enum OUTPUT_DATA_STATUS { DATA_STATYS_EXIT, DATA_STATYS_PASS, DATA_STATYS_PAUSE };
+
 typedef void (*CloseHandlerFunc)(void *arg, int err, int result);
 typedef void (*PacketReceiveHandlerFunc)(void *arg, const char *trackId, char *buf, int len);
 
@@ -199,9 +201,9 @@ protected:
 
 public:
 	uint8_t*		fOutputData;
-	unsigned        fOutputDataSize;
-	bool			fOutputDataFlag;
-	RTP_FRAME_TYPE	fOutputDataType;
+	unsigned		fOutputDataSize;
+	OUTPUT_DATA_STATUS	fOutputDataFlag;
+	RTP_FRAME_TYPE		fOutputDataType;
 	int64_t			fOutputDataTimestamp;
 };
 

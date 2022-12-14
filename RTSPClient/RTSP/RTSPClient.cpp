@@ -59,7 +59,7 @@ RTSPClient::RTSPClient()
 	fRTPReceiveHandlerData = fRTCPReceiveHandlerData = NULL;
 
 	fOutputData		= NULL;
-	fOutputDataFlag = true;
+	fOutputDataFlag = DATA_STATYS_PAUSE;
 
 	fTask = new TaskScheduler();
 }
@@ -75,6 +75,10 @@ RTSPClient::~RTSPClient()
 
 void RTSPClient::reset()
 {
+        pthread_mutex_lock(&g_tMutex);
+	fOutputDataFlag = DATA_STATYS_EXIT;
+	pthread_cond_signal(&g_tConVar);
+	pthread_mutex_unlock(&g_tMutex);
 	fTask->stopEventLoop();
 
 	if (fRtspSock.isOpened()) {
@@ -1661,7 +1665,7 @@ static void getFrameBuf(void *arg, uint8_t* &frameBuf, int &frameBufSize)
 
     pthread_mutex_lock(&g_tMutex);
 
-    while(client->fOutputDataFlag)
+    while(client->fOutputDataFlag == DATA_STATYS_PAUSE)
 	pthread_cond_wait(&g_tConVar, &g_tMutex);
 
     frameBuf = client->fOutputData;
@@ -1674,8 +1678,8 @@ static void outputFrameHandler(void *arg, RTP_FRAME_TYPE frame_type, int64_t tim
 	RTSPClient *client = (RTSPClient *)arg;
 
 	pthread_mutex_lock(&g_tMutex);
-
-	client->fOutputDataFlag = true;
+	if (client->fOutputDataFlag == DATA_STATYS_PASS)
+	    client->fOutputDataFlag = DATA_STATYS_PAUSE;
 	client->fOutputDataType = frame_type;
 	client->fOutputDataSize = len;
 	client->fOutputDataTimestamp = timestamp;
@@ -1690,7 +1694,7 @@ void RTSPClient::setOutputData(uint8_t *buf, unsigned size)
 
 	fOutputData = buf;
 	fOutputDataSize = size;
-	fOutputDataFlag = false;
+	fOutputDataFlag = DATA_STATYS_PASS;
 	pthread_cond_signal(&g_tConVar);
 	pthread_mutex_unlock(&g_tMutex);
 
@@ -1700,7 +1704,7 @@ uint8_t *RTSPClient::getOutputDataTimeOut(unsigned &size, RTP_FRAME_TYPE &frame_
 {
 	uint8_t *buf = NULL;
 	pthread_mutex_lock(&g_tMutex);
-	if (fOutputDataFlag) {
+	if (fOutputDataFlag == DATA_STATYS_PAUSE) {
 		size = fOutputDataSize;
 		buf = fOutputData;
 		frame_type = fOutputDataType;
@@ -1710,14 +1714,11 @@ uint8_t *RTSPClient::getOutputDataTimeOut(unsigned &size, RTP_FRAME_TYPE &frame_
 	}
 
 	pthread_cond_timedwait(&g_tConVar, &g_tMutex, timeout);
-	if (fOutputDataFlag) {
+	if (fOutputDataFlag == DATA_STATYS_PAUSE) {
 		size = fOutputDataSize;
 		buf = fOutputData;
 		frame_type = fOutputDataType;
 		timestamp = fOutputDataTimestamp;
-	} else {
-	    fOutputDataFlag = true;
-	    size = 0;
 	}
 	pthread_mutex_unlock(&g_tMutex);
 	return buf;
