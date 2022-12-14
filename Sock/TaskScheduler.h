@@ -31,7 +31,8 @@ public:
 
 	int isRunning() { return fTaskLoop; }
 
-protected:		
+protected:
+	virtual void HandledLastSocket();
 	virtual void SingleStep();
 	void taskLock();
 	void taskUnlock();

@@ -107,30 +107,36 @@ void TaskScheduler::doEventLoop()
 	}
 }
 
+void TaskScheduler::HandledLastSocket()
+{
+    int ret;
+    struct pollfd p[1] = {{fLastHandledSocketNum, POLLIN, 0},};
+    ret = poll(p, 1, 2000);
+    if (ret == 0) {
+		fFrameCompletion = true;
+		return;
+    } else if (ret < 0){
+		return;
+    }
+
+    HandlerIterator iter(*fReadHandlers);
+    HandlerDescriptor* handler;
+    iter.reset();
+    while ((handler = iter.next()) != NULL) {
+		if (handler->socketNum == fLastHandledSocketNum) {
+		    (*handler->handlerProc)(handler->clientData, SOCKET_READABLE);
+		}
+    }
+}
+
 void TaskScheduler::SingleStep()
 {
 	taskLock();
 
 	if (!fFrameCompletion) {
-	    int ret;
-	    struct pollfd p[1] = {{fLastHandledSocketNum, POLLIN, 0},};
-	    ret = poll(p, 1, 2000);
-	    if (ret == 0) {
-		fFrameCompletion = true;
+		HandledLastSocket();
+		taskUnlock();
 		return;
-	    } else if (ret < 0){
-		return;
-	    }
-
-	    HandlerIterator iter(*fReadHandlers);
-	    HandlerDescriptor* handler;
-//	    iter.reset();
-	    while ((handler = iter.next()) != NULL) {
-		if (handler->socketNum == fLastHandledSocketNum) {
-		    (*handler->handlerProc)(handler->clientData, SOCKET_READABLE);
-		}
-	    }
-	    return;
 	}
 
 	fd_set readSet = fReadSet;
