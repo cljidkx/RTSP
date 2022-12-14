@@ -5,14 +5,12 @@
 RTPPacketBuffer::RTPPacketBuffer() : fBuf(NULL), fLength(0), fVersion(0), fPadding(0), fExtension(0), fCSRCCount(0),
 fMarkerBit(0), fPayloadType(0), fSequenceNum(0), fTimestamp(0), fSSRC(0), fExtTimestamp(0), fIsFirstPacket(false), fNextPacket(NULL) 
 {
-	fBuf = new uint8_t[MAX_RTP_PACKET_SIZE];
-	fCurPtr = fBuf;
+	fCurPtr = NULL;
 }
 
 RTPPacketBuffer::~RTPPacketBuffer()
 {
 	DELETE_OBJECT(fNextPacket);
-	DELETE_ARRAY(fBuf);
 }
 
 uint8_t* RTPPacketBuffer::payload()
@@ -33,7 +31,7 @@ bool RTPPacketBuffer::packetHandler(uint8_t *buf, int len)
 		return false;
 	}
 
-	memcpy(fBuf, buf, len);
+	fBuf = buf;
 	fCurPtr = fBuf;
 	fLength = len;
 

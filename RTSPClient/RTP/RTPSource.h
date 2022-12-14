@@ -14,6 +14,7 @@
 
 enum RTP_FRAME_TYPE { FRAME_TYPE_VIDEO, FRAME_TYPE_AUDIO, FRAME_TYPE_ETC };
 typedef void (*FrameHandlerFunc)(void *arg, RTP_FRAME_TYPE frame_type, int64_t timestamp, uint8_t *buf, int len);
+typedef void (*getFrameBufFunc)(void *arg, uint8_t * &frameBuf, int &frameBufSize);
 typedef void (*RTPHandlerFunc)(void *arg, char *trackId, char *buf, int len);
 
 class MediaSubsession;
@@ -24,7 +25,7 @@ public:
 	RTPSource(int streamType, MediaSubsession &subsession, TaskScheduler &task); 
 	virtual ~RTPSource();
 
-	void startNetworkReading(FrameHandlerFunc frameHandler, void *frameHandlerData, 
+	void startNetworkReading(getFrameBufFunc getFrameBuf, FrameHandlerFunc frameHandler, void *frameHandlerData, 
 		RTPHandlerFunc rtpHandler, void *rtpHandlerData,
 		RTPHandlerFunc rtcpHandler, void *rtcpHandlerData);
 	void stopNetworkReading();
@@ -85,7 +86,10 @@ protected:
 	time_t					fLastRtcpSendTime;
 	
 	uint8_t*			fFrameBuffer;
+	uint8_t*			fFrameBufferBack;
 	int					fFrameBufferPos;
+	int				fFrameBufferSize;
+	getFrameBufFunc		fGetFrameBuf;
 	FrameHandlerFunc	fFrameHandler;
 	void*				fFrameHandlerData;
 

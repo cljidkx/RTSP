@@ -4,6 +4,7 @@
 #include "NetCommon.h"
 #include "Mutex.h"
 #include "Thread.h"
+#include <poll.h>
 
 #define SOCKET_READABLE    (1<<1)
 #define SOCKET_WRITABLE    (1<<2)
@@ -25,6 +26,8 @@ public:
 	int startEventLoop();
 	void stopEventLoop();
 	void doEventLoop();
+	void setFrameCompletion(bool frameCompletion) { fFrameCompletion = frameCompletion; }
+	bool getFrameCompletion() { return fFrameCompletion; }
 
 	int isRunning() { return fTaskLoop; }
 
@@ -34,15 +37,16 @@ protected:
 	void taskUnlock();
 
 protected:
-	int					fTaskLoop;
-	MUTEX				fMutex;
-	THREAD				fThread;
+	int		fTaskLoop;
+	MUTEX		fMutex;
+	THREAD		fThread;
 
 	HandlerSet	*fReadHandlers;
-	int			fLastHandledSocketNum;
+	int		fLastHandledSocketNum;
 
 	int		fMaxNumSockets;
-	fd_set	fReadSet;
+	fd_set		fReadSet;
+	bool		fFrameCompletion;
 };
 
 class HandlerDescriptor {

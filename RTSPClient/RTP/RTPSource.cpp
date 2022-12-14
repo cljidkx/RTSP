@@ -36,7 +36,9 @@ fRtpHandler(NULL), fRtpHandlerData(NULL), fRtcpHandler(NULL), fRtcpHandlerData(N
 	else if (!strcmp(subsession.mediumName(), "audio"))
 		fFrameType = FRAME_TYPE_AUDIO;
 
-	fFrameBuffer = new uint8_t[FRAME_BUFFER_SIZE];
+	fFrameBufferBack = new uint8_t[FRAME_BUFFER_SIZE];
+	fFrameBuffer = fFrameBufferBack;
+	fFrameBufferSize = FRAME_BUFFER_SIZE;
 	fFrameBufferPos = 0;
 
 	fLastSeqNum = fLastSeqNum2 = 0;
@@ -91,7 +93,7 @@ RTPSource::~RTPSource()
 	DELETE_OBJECT(fRtcpInstance);
 
 	DELETE_ARRAY(fRecvBuf);
-	DELETE_ARRAY(fFrameBuffer);
+	DELETE_ARRAY(fFrameBufferBack);
 	DELETE_ARRAY(fCodecName);
 	DELETE_ARRAY(fExtraData);
 	DELETE_ARRAY(fTrackId);
@@ -99,10 +101,13 @@ RTPSource::~RTPSource()
 	DELETE_OBJECT(fReorderingBuffer);
 }
 
-void RTPSource::startNetworkReading(FrameHandlerFunc frameHandler, void *frameHandlerData, 
+void RTPSource::startNetworkReading(getFrameBufFunc getFrameBuf, FrameHandlerFunc frameHandler, void *frameHandlerData, 
 									RTPHandlerFunc rtpHandler, void *rtpHandlerData,
 									RTPHandlerFunc rtcpHandler, void *rtcpHandlerData)
 {
+	fGetFrameBuf = getFrameBuf;
+	if (fGetFrameBuf)
+	    fFrameBuffer = NULL;
 	fFrameHandler = frameHandler;
 	fFrameHandlerData = frameHandlerData;
 
@@ -127,6 +132,7 @@ void RTPSource::stopNetworkReading()
 	if (fRtcpSock.isOpened())
 		fTask->turnOffBackgroundReadHandling(fRtcpSock.sock());
 
+	fGetFrameBuf = NULL;
 	fFrameHandler = NULL;
 	fFrameHandlerData = NULL;
 
@@ -187,6 +193,12 @@ void RTPSource::rtpReadHandler(char *buf, int len, struct sockaddr_in &fromAddre
 skip:
 	if (!readSuccess)
 		fReorderingBuffer->freePacket(packet);
+
+	if (fTask->getFrameCompletion()) {
+	    fTask->setFrameCompletion(false);
+	    if (fGetFrameBuf)
+		fGetFrameBuf(fFrameHandlerData, fFrameBuffer, fFrameBufferSize);
+	}
 
 	processNextPacket();
 
@@ -329,8 +341,6 @@ void RTPSource::rtcpReadHandler(char *buf, int len, struct sockaddr_in &fromAddr
 
 void RTPSource::sendRtcpReport(char *buf, int len)
 {
-	int ret = 0;
-
 	if (fStreamType == STREAM_TYPE_UDP || fStreamType == STREAM_TYPE_MULTICAST)
 	{
 		struct sockaddr_in toAddress;
@@ -339,12 +349,12 @@ void RTPSource::sendRtcpReport(char *buf, int len)
 		toAddress.sin_addr.s_addr = fSvrAddr;
 		toAddress.sin_port = htons(fRtcpHisPort);
 
-		ret = fRtcpSock.writeSocket(buf, len, toAddress);
+		fRtcpSock.writeSocket(buf, len, toAddress);
 	}
 	else
 	{
 		if (fRtspSock)
-			ret = fRtspSock->sendRTPOverTCP(buf, len, fRtcpChannelId);
+		    fRtspSock->sendRTPOverTCP(buf, len, fRtcpChannelId);
 	}
 
 	fLastRtcpSendTime = time(NULL);
@@ -352,7 +362,7 @@ void RTPSource::sendRtcpReport(char *buf, int len)
 
 void RTPSource::copyToFrameBuffer(uint8_t *buf, int len)
 {
-	if (fFrameBufferPos+len >= FRAME_BUFFER_SIZE) {
+	if (fFrameBufferPos+len >= fFrameBufferSize) {
 		DPRINTF("RTP Frame Buffer overflow %s\n", fCodecName);
 		fFrameBufferPos = 0;
 	}
@@ -363,6 +373,7 @@ void RTPSource::copyToFrameBuffer(uint8_t *buf, int len)
 void RTPSource::resetFrameBuffer()
 {
 	fFrameBufferPos = 0;
+	fTask->setFrameCompletion(true);
 }
 
 uint64_t RTPSource::getRealTimestamp(uint32_t timestamp)
